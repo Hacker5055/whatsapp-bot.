@@ -1,0 +1,12 @@
+}
+
+start().catch(e => {
+  console.error('فشل التشغيل:', e)
+})
+
+3. .gitignore
+
+
+
+node_modules
+session
