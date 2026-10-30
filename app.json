@@ -1,0 +1,27 @@
+{
+  "name": "Black X",
+  "description": "بوت واتساب عربي لإدارة المجموعات، مع جلسة مشفرة في PostgreSQL",
+  "repository": "https://github.com/Hacker5055/whatsapp-bot.",
+  "keywords": ["whatsapp", "arabic", "bot", "black-x"],
+  "stack": "container",
+  "formation": {
+    "worker": { "quantity": 1, "size": "basic" }
+  },
+  "addons": [{ "plan": "heroku-postgresql:essential-0" }],
+  "env": {
+    "BOT_NAME": { "value": "Black X" },
+    "OWNER_NAME": { "description": "اسم مالك البوت", "value": "مالك البوت" },
+    "OWNER_NUMBER": { "description": "رقم المالك الدولي بدون +، مثال 2010XXXXXXXX. ليس بالضرورة رقم البوت.", "required": false },
+    "BOT_MODE": { "description": "private للمالك والمساعدين فقط؛ public للجميع", "value": "private" },
+    "SESSION_ID": { "value": "black-x" },
+    "SESSION_ENCRYPTION_KEY": { "description": "مفتاح ثابت لتشفير الجلسة. 64 حرف hex مولّد أدناه. لا تغيّره بعد الربط ولا تنشره.", "generator": "secret" },
+    "PAIRING_NUMBER": { "description": "رقم البوت الدولي بدون + للربط مرة واحدة. احذفه بعد نجاح الربط.", "required": false },
+    "DATABASE_SSL_REJECT_UNAUTHORIZED": { "value": "false" },
+    "OPENWEATHER_API_KEY": { "required": false },
+    "NEWS_API_KEY": { "required": false },
+    "NEWS_COUNTRY": { "value": "eg", "required": false },
+    "GIPHY_API_KEY": { "required": false },
+    "MEDIA_API_KEY": { "required": false },
+    "PRINCE_API_KEY": { "required": false }
+  }
+}

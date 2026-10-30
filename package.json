@@ -1,13 +1,73 @@
-"name": "wa-antilink-bot",
+{
+  "name": "black-x",
   "version": "1.0.0",
-  "type": "module",
+  "description": "Black X — بوت واتساب عربي لإدارة المجموعات",
+  "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "pair": "node scripts/pair.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node scripts/check.js",
+    "cleanup": "node scripts/cleanup.js",
+    "session:key": "node scripts/session-key.js"
   },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "arabic",
+    "black-x",
+    "baileys"
+  ],
+  "author": "",
+  "license": "SEE LICENSE IN NOTICE.md",
   "dependencies": {
-    "@whiskeysockets/baileys": "^5.0.0",
+    "@distube/ytdl-core": "^5.2.0",
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "awesome-phonenumber": "^5.9.0",
+    "axios": "^1.8.4",
+    "chalk": "^4.1.2",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.4.5",
+    "file-type": "^22.3.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "form-data": "^4.0.6",
+    "fs-extra": "^11.2.0",
+    "gtts": "^0.2.1",
+    "human-readable": "^0.2.1",
+    "libphonenumber-js": "^1.11.18",
+    "moment-timezone": "^0.5.43",
+    "mumaker": "^2.0.0",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^2.7.0",
+    "node-id3": "^0.2.3",
+    "node-webpmux": "^3.1.0",
+    "node-youtube-music": "^0.8.3",
+    "pg": "8.16.3",
+    "phin": "^3.7.1",
+    "pino": "^8.21.0",
+    "qrcode": "^1.5.4",
+    "qrcode-reader": "^1.0.4",
     "qrcode-terminal": "^0.12.0",
-    "pino": "^8.0.0",
-    "fs-extra": "^11.1.1"
+    "ruhend-scraper": "^8.3.0",
+    "sharp": "^0.35.5",
+    "ytsr": "^3.8.4"
+  },
+  "engines": {
+    "node": "22.x",
+    "npm": ">=10"
+  },
+  "devDependencies": {
+    "acorn": "^8.15.0",
+    "acorn-walk": "^8.3.4"
+  },
+  "overrides": {
+    "form-data": "^4.0.6",
+    "qs": "^6.16.0",
+    "jsonpath-plus": "^10.4.0",
+    "tough-cookie": "^5.1.2",
+    "tar": "^7.5.22",
+    "node-fetch": "^2.7.0",
+    "zod": "^3.25.76"
   }
 }
