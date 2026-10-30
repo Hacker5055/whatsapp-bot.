@@ -88,6 +88,23 @@ async function start(attempt = 0) {
         if (seen.size > 2000) seen.delete(seen.values().next().value);
         const message = { ...original, message: original.message.ephemeralMessage?.message || original.message };
         try {
+          const target = message.key.remoteJid;
+          const text = (message.message?.conversation || message.message?.extendedTextMessage?.text || '').trim();
+          // Private self-chat control: never expose group IDs or control commands to colleagues.
+          if (message.key.fromMe && target && !target.endsWith('@g.us') && target !== 'status@broadcast') {
+            if (text === '.مجموعاتي') {
+              const groups = await sock.groupFetchAllParticipating();
+              const lines = Object.values(groups).map(g => `${g.subject}: ${g.id}`);
+              await sock.sendMessage(target, { text: lines.length ? lines.join('\n').slice(0, 3500) : 'لا توجد مجموعات.' });
+              continue;
+            }
+            const control = text.match(/^\.صمت\s+(تشغيل|إيقاف|ايقاف|on|off)\s+([0-9-]+@g\.us)$/i);
+            if (control) {
+              await groupSilence.setSilent(control[2], /^(تشغيل|on)$/i.test(control[1]));
+              await sock.sendMessage(target, { text: 'تم تحديث صمت المجموعة. لا يُرسل أي إشعار إليها.' });
+              continue;
+            }
+          }
           if (message.key.remoteJid === 'status@broadcast') {
             await main.handleStatus(sock, { ...update, messages: [message] });
           } else {
