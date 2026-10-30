@@ -163,3 +163,21 @@ test('group silence is per-group, persistent, and blocks even direct outbound re
     silence.load();
   }
 });
+
+test('environment group silence applies before any command and rejects invalid IDs', () => {
+  const silence = require('../lib/group-silence');
+  const prior = process.env.SILENT_GROUP_IDS;
+  try {
+    process.env.SILENT_GROUP_IDS = '123-456@g.us,789-123@g.us';
+    silence.load();
+    assert.equal(silence.isSilent('123-456@g.us'), true);
+    assert.equal(silence.isSilent('789-123@g.us'), true);
+    assert.equal(silence.isSilent('unlisted@g.us'), false);
+    process.env.SILENT_GROUP_IDS = 'bad-value';
+    assert.throws(() => silence.load(), /SILENT_GROUP_IDS/);
+  } finally {
+    if (prior === undefined) delete process.env.SILENT_GROUP_IDS;
+    else process.env.SILENT_GROUP_IDS = prior;
+    silence.load();
+  }
+});

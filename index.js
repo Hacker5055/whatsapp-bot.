@@ -80,9 +80,10 @@ async function start(attempt = 0) {
     });
     const seen = new Set();
     sock.ev.on('messages.upsert', async update => {
-      if (update.type !== 'notify') return;
+      if (update.type !== 'notify' && update.type !== 'append') return;
       for (const original of update.messages) {
         if (!original.message || !original.key?.id || seen.has(original.key.id)) continue;
+        if (update.type === 'append' && !(original.key.fromMe && original.key.remoteJid && !original.key.remoteJid.endsWith('@g.us') && /^(?:\.مجموعاتي|\.صمت\s+)/.test(original.message?.conversation || original.message?.extendedTextMessage?.text || ''))) continue;
         if (groupSilence.isSilent(original.key.remoteJid) && !/^\.صمت\s+(?:إيقاف|ايقاف|off)\s*$/i.test(original.message?.conversation || original.message?.extendedTextMessage?.text || '')) continue;
         seen.add(original.key.id);
         if (seen.size > 2000) seen.delete(seen.values().next().value);
@@ -105,6 +106,7 @@ async function start(attempt = 0) {
               continue;
             }
           }
+          if (update.type === 'append') continue;
           if (message.key.remoteJid === 'status@broadcast') {
             await main.handleStatus(sock, { ...update, messages: [message] });
           } else {
