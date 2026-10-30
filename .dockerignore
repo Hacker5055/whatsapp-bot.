@@ -1,0 +1,14 @@
+.git
+node_modules
+.env
+.env.*
+session
+auth_info_baileys
+temp
+tmp
+coverage
+release
+*.log
+*.zip
+baileys_store.json
+black-x-source.zip

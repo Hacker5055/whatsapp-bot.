@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+session/
+auth_info_baileys/
+temp/
+tmp/
+baileys_store.json
+*.log
+npm-debug.log*
+coverage/
+.DS_Store
+*.zip
+release/
+data/*.tmp
