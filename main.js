@@ -159,6 +159,7 @@ global.ytch = "Black X";
 // Add this near the top of main.js with other global configurations
 const channelInfo = {};
 
+const groupSilence = require('./lib/group-silence');
 async function handleMessages(sock, messageUpdate, printLog) {
     let chatId;
     try {
@@ -166,6 +167,21 @@ async function handleMessages(sock, messageUpdate, printLog) {
         let message = messages[0];
         if (!message?.message) return;
         if (type !== 'notify') return;
+
+        const groupId = message.key?.remoteJid;
+        if (groupId?.endsWith('@g.us')) {
+            const text = (message.message?.conversation || message.message?.extendedTextMessage?.text || '').trim();
+            const control = text.match(/^\.صمت\s+(تشغيل|إيقاف|ايقاف|on|off)$/i);
+            if (control) {
+                const sender = message.key.participant || groupId;
+                const authorized = message.key.fromMe || await isOwnerOrSudo(sender, sock, groupId);
+                if (authorized) {
+                    await groupSilence.setSilent(groupId, /^(تشغيل|on)$/i.test(control[1]));
+                }
+                return; // never acknowledge in the group, including on errors
+            }
+            if (groupSilence.isSilent(groupId)) return;
+        }
 
         // Handle autoread functionality
         await handleAutoread(sock, message);

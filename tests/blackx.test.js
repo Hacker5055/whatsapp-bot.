@@ -134,3 +134,32 @@ test('PostgreSQL Signal auth persists encrypted credentials and key state', asyn
   await next.state.keys.set({ 'pre-key': { demo: null } });
   assert.equal(rows.has('pre-key:demo'), false);
 });
+
+test('group silence is per-group, persistent, and blocks even direct outbound replies', async () => {
+  const silence = require('../lib/group-silence');
+  const file = path.join(state.dataDir, 'silent-groups.json');
+  const old = fs.existsSync(file) ? fs.readFileSync(file) : null;
+  const { sock, sent } = fakeSocket();
+  attachLocalization(sock);
+  silence.protect(sock);
+  const handler = require('../main').handleMessages;
+  const groupMessage = (text, id) => ({ key: { remoteJid: 'work@g.us', participant: '201012345678@s.whatsapp.net', fromMe: true, id }, message: { conversation: text } });
+  try {
+    silence.load();
+    await handler(sock, { messages: [groupMessage('.صمت تشغيل', 's1')], type: 'notify' });
+    assert.equal(silence.isSilent('work@g.us'), true);
+    assert.equal(sent.length, 0);
+    silence.load();
+    assert.equal(silence.isSilent('work@g.us'), true);
+    await handler(sock, { messages: [groupMessage('.اوامر', 's2')], type: 'notify' });
+    await sock.sendMessage('work@g.us', { text: 'error fallback' });
+    assert.equal(sent.length, 0);
+    assert.equal(silence.isSilent('other@g.us'), false);
+    await handler(sock, { messages: [groupMessage('.صمت إيقاف', 's3')], type: 'notify' });
+    assert.equal(silence.isSilent('work@g.us'), false);
+  } finally {
+    if (old === null) fs.rmSync(file, { force: true });
+    else fs.writeFileSync(file, old);
+    silence.load();
+  }
+});

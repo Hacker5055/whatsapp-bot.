@@ -8,6 +8,7 @@ const qrcode = require('qrcode');
 const { openConnection } = require('./lib/connection');
 const { closeDatabase } = require('./lib/database');
 const state = require('./lib/state-store');
+const groupSilence = require('./lib/group-silence');
 const { attachLocalization } = require('./lib/localize');
 const { normalizePhone } = require('./lib/phone');
 
@@ -53,6 +54,7 @@ async function start(attempt = 0) {
     });
     active = connection;
     await state.hydrate();
+    groupSilence.load();
     // Load commands only AFTER remote settings have been restored.
     const main = require('./main');
     const store = require('./lib/lightweight_store');
@@ -60,6 +62,7 @@ async function start(attempt = 0) {
     const { smsg } = require('./lib/myfunc');
     const sock = connection.sock;
     attachLocalization(sock);
+    groupSilence.protect(sock);
     sock.ev.on('blackx:fatal', () => shutdown(1));
     sock.decodeJid = jid => {
       if (!jid) return jid;
@@ -80,6 +83,7 @@ async function start(attempt = 0) {
       if (update.type !== 'notify') return;
       for (const original of update.messages) {
         if (!original.message || !original.key?.id || seen.has(original.key.id)) continue;
+        if (groupSilence.isSilent(original.key.remoteJid) && !/^\.صمت\s+(?:إيقاف|ايقاف|off)\s*$/i.test(original.message?.conversation || original.message?.extendedTextMessage?.text || '')) continue;
         seen.add(original.key.id);
         if (seen.size > 2000) seen.delete(seen.values().next().value);
         const message = { ...original, message: original.message.ephemeralMessage?.message || original.message };
@@ -97,7 +101,9 @@ async function start(attempt = 0) {
         }
       }
     });
-    sock.ev.on('group-participants.update', update => main.handleGroupParticipantUpdate(sock, update).catch(console.error));
+    sock.ev.on('group-participants.update', update => {
+      if (!groupSilence.isSilent(update.id)) main.handleGroupParticipantUpdate(sock, update).catch(console.error);
+    });
     sock.ev.on('call', async calls => {
       const { readState } = require('./commands/anticall');
       if (!readState().enabled) return;
