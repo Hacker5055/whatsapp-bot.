@@ -9,6 +9,7 @@ const { openConnection } = require('./lib/connection');
 const { closeDatabase } = require('./lib/database');
 const state = require('./lib/state-store');
 const groupSilence = require('./lib/group-silence');
+const commandOnly = require('./lib/command-only');
 const { attachLocalization } = require('./lib/localize');
 const { normalizePhone } = require('./lib/phone');
 
@@ -63,6 +64,7 @@ async function start(attempt = 0) {
     const sock = connection.sock;
     attachLocalization(sock);
     groupSilence.protect(sock);
+    commandOnly.protect(sock);
     sock.ev.on('blackx:fatal', () => shutdown(1));
     sock.decodeJid = jid => {
       if (!jid) return jid;
@@ -96,46 +98,30 @@ async function start(attempt = 0) {
             if (text === '.مجموعاتي') {
               const groups = await sock.groupFetchAllParticipating();
               const lines = Object.values(groups).map(g => `${g.subject}: ${g.id}`);
-              await sock.sendMessage(target, { text: lines.length ? lines.join('\n').slice(0, 3500) : 'لا توجد مجموعات.' });
+              await commandOnly.runCommand(() => sock.sendMessage(target, { text: lines.length ? lines.join('\n').slice(0, 3500) : 'لا توجد مجموعات.' }));
               continue;
             }
             const control = text.match(/^\.صمت\s+(تشغيل|إيقاف|ايقاف|on|off)\s+([0-9-]+@g\.us)$/i);
             if (control) {
               await groupSilence.setSilent(control[2], /^(تشغيل|on)$/i.test(control[1]));
-              await sock.sendMessage(target, { text: 'تم تحديث صمت المجموعة. لا يُرسل أي إشعار إليها.' });
+              await commandOnly.runCommand(() => sock.sendMessage(target, { text: 'تم تحديث صمت المجموعة. لا يُرسل أي إشعار إليها.' }));
               continue;
             }
           }
           if (update.type === 'append') continue;
-          if (message.key.remoteJid === 'status@broadcast') {
-            await main.handleStatus(sock, { ...update, messages: [message] });
-          } else {
-            const { handleAntibotDetection } = require('./commands/antibot');
-            if (message.key.remoteJid?.endsWith('@g.us') && !message.key.fromMe) await handleAntibotDetection(sock, message);
-            await main.handleMessages(sock, { ...update, messages: [message] }, true);
-          }
+          if (target === 'status@broadcast') continue;
+          const input = message.message?.conversation || message.message?.extendedTextMessage?.text ||
+            message.message?.imageMessage?.caption || message.message?.videoMessage?.caption || '';
+          if (!/^\.\S+/.test(input.trim())) continue;
+          await commandOnly.runCommand(() => main.handleMessages(sock, { ...update, type: 'notify', messages: [message] }, true));
         } catch (error) {
           console.error('❌ تعذر تنفيذ الأمر:', error?.message || error);
           await sock.sendMessage(message.key.remoteJid, { text: '❌ حصل خطأ أثناء تنفيذ الأمر. جرّب مرة تانية.' }).catch(() => {});
         }
       }
     });
-    sock.ev.on('group-participants.update', update => {
-      if (!groupSilence.isSilent(update.id)) main.handleGroupParticipantUpdate(sock, update).catch(console.error);
-    });
-    sock.ev.on('call', async calls => {
-      const { readState } = require('./commands/anticall');
-      if (!readState().enabled) return;
-      for (const call of calls) {
-        try {
-          if (call.id && call.from) await sock.rejectCall(call.id, call.from);
-          if (call.from) {
-            await sock.sendMessage(call.from, { text: '📵 المكالمات على البوت غير متاحة. ابعت رسالتك في المجموعة.' });
-            await sock.updateBlockStatus(call.from, 'block');
-          }
-        } catch {}
-      }
-    });
+    // No welcome, goodbye, promotion or other unsolicited group announcements.
+    // Calls never trigger messages or automatic blocking in command-only mode.
     let opened = false;
     sock.ev.on('connection.update', async update => {
       if (update.qr && !pairingNumber) {
@@ -147,10 +133,6 @@ async function start(attempt = 0) {
         opened = true;
         console.log(`✅ ${settings.botName} متصل وجاهز. اكتب .اوامر أو .menu في واتساب.`);
         console.log(`🔐 حفظ الجلسة: ${connection.persistent ? 'PostgreSQL مشفّر' : 'مجلد session محلي — غير مناسب لـ Heroku'}`);
-        if (!connection.registered) {
-          const jid = jidNormalizedUser(sock.user.id);
-          await sock.sendMessage(jid, { text: `✅ *${settings.botName} متصل بنجاح!*\n\nأنا مساعدك العربي لإدارة المجموعات.\nاكتب *.اوامر* لعرض الأوامر.\n🔒 الوضع الافتراضي خاص؛ اكتب *.وضع عام* للسماح للجميع.` }).catch(() => {});
-        }
       }
       if (update.connection === 'close' && !stopping) {
         clearInterval(storeTimer);

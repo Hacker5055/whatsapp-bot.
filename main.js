@@ -183,8 +183,11 @@ async function handleMessages(sock, messageUpdate, printLog) {
             if (groupSilence.isSilent(groupId)) return;
         }
 
-        // Handle autoread functionality
-        await handleAutoread(sock, message);
+        const commandInput = message.message?.conversation || message.message?.extendedTextMessage?.text ||
+            message.message?.imageMessage?.caption || message.message?.videoMessage?.caption || '';
+        if (!/^\s*\.\S+/.test(commandInput)) return;
+
+        // Reading and automatic replies are disabled in command-only mode.
 
         // Store message for antidelete feature
         if (message.message) {
@@ -1162,11 +1165,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
             default:
                 if (isGroup) {
                     // Handle non-command group messages
-                    if (userMessage) {  // Make sure there's a message
-                        await handleChatbotResponse(sock, chatId, message, originalText, senderId);
-                    }
-                    await handleTagDetection(sock, chatId, message, senderId);
-                    await handleMentionDetection(sock, chatId, message);
+                    // Unknown commands do not activate chatbot or moderation replies.
                 }
                 commandExecuted = false;
                 break;

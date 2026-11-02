@@ -181,3 +181,18 @@ test('environment group silence applies before any command and rejects invalid I
     silence.load();
   }
 });
+
+test('command-only guard blocks unsolicited sends but permits command replies', async () => {
+  const { runCommand, protect } = require('../lib/command-only');
+  const { sock, sent } = fakeSocket();
+  protect(sock);
+  await sock.sendMessage('work@g.us', { text: 'welcome' });
+  assert.equal(sent.length, 0);
+  await runCommand(async () => {
+    await sock.sendMessage('other@g.us', { text: 'command response' });
+    await Promise.resolve();
+    await sock.sendMessage('other@g.us', { text: 'async command response' });
+  });
+  await sock.sendMessage('other@g.us', { text: 'background' });
+  assert.equal(sent.length, 2);
+});
